@@ -1,0 +1,139 @@
+---
+title: Implementation Notes
+description: Non-normative guidance and best practices for implementing the Open Responses specification.
+---
+
+# Implementation Notes
+
+> This document is **non-normative**. It provides practical guidance and best practices
+> practices for implementing the Open Responses specification, but does not
+> override or modify any requirements defined in the core specification.
+
+---
+
+## Purpose
+
+The Open Responses specification is intentionally precise and provider-neutral.
+This page exists to share **implementation guidance**, common pitfalls, and
+recommended patterns that improve interoperability without constraining
+internal design choices.
+
+---
+
+## Streaming and State Management
+
+Open Responses defines streaming in terms of **semantic events**, not raw tokens
+deltas.
+
+**Recommendations:**
+- Treat streaming events as **authoritative state transitions**.
+- Do not infer state from partial text output alone.
+- Reconstruct the response state by applying events in sequence order.
+
+Implementations should maintain an internal state machine that consumes
+`response.*` events and updates items incrementally until a terminal event is
+received.
+
+---
+
+## Item Identity and Lifecycle
+
+Items are the fundamental unit of context and output.
+
+**Best practices:**
+- Assign **stable, unique IDs** to items for the duration of a response.
+- Do not reuse item IDs across separate responses.
+- Emit explicit lifecycle transitions (created, updated, completed) rather than
+  relying on implicit assumptions.
+
+Clients should be tolerant of partial item updates and incomplete items while a
+response is still in progress.
+
+---
+
+## Ordering and Event Delivery
+
+While events are typically delivered in order, implementations should assume
+that:
+
+- Clients may buffer and reorder events using sequence identifiers.
+- Network or transport layers may delay or batch events.
+
+Avoid designs that depend on strict real-time delivery or transport-level
+ordering guarantees.
+
+---
+
+## Tool Invocation Loops
+
+Tool calls enable agentic workflows and multi-step reasoning.
+
+**Guidance:**
+- Emit tool calls as explicit output items.
+- Pause model execution until tool results are provided, unless the tool is
+  executed internally.
+- Accept tool results as new input items and continue the response loop.
+
+Clients should be prepared to handle tool failures, timeouts, or partial results
+without corrupting the response state.
+
+---
+
+## Error Handling
+
+Errors should be **explicit, structured, and observable**.
+
+**Recommendations:**
+- Prefer emitting structured error items over terminating connections abruptly.
+- Distinguish between recoverable and terminal errors.
+- When streaming, emit a failure or terminal event before closing the stream.
+
+This improves debuggability and enables clients to make informed retry decisions.
+
+---
+
+## Extensions and Custom Types
+
+Open Responses allows provider-specific extensions.
+
+**Guidelines:**
+- Extensions should not redefine or overload core fields.
+- Custom item or event types should be clearly named.
+- Clients must be able to ignore unknown types safely.
+
+Extensions should be additive and non-blocking for generic clients.
+
+---
+
+## Observability and Diagnostics
+
+For production implementations:
+
+- Log semantic events and item transitions.
+- Track metrics such as tool latency, event counts, and error rates.
+- Preserve event ordering information to support replay and debugging.
+
+Strong observability helps diagnose interoperability issues across providers.
+
+---
+
+## Relationship to the Specification
+
+This document complements, but does not replace:
+- The core **Specification**
+- The **Reference API definition**
+- The **Compliance and acceptance tests**
+
+If a conflict arises, the **Specification always takes precedence**.
+
+---
+
+## Summary
+
+Use these implementation notes to:
+- Reduce ambiguity during development
+- Improve cross-provider interoperability
+- Avoid common implementation pitfalls
+
+They are intended to evolve alongside real-world usage and feedback from the
+community.
